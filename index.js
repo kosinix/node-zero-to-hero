@@ -2,6 +2,7 @@
 const express = require('express')
 const nunjucks = require('nunjucks')
 const session = require('express-session')
+const bodyParser = require('body-parser')
 
 // Constants
 const appDir = __dirname // Path to app directory
@@ -10,6 +11,12 @@ const port = 3000
 
 // Express initialization
 const app = express()
+
+// Parse http body
+app.use(bodyParser.json()) // to support JSON-encoded bodies
+app.use(bodyParser.urlencoded({ // to support URL-encoded bodies
+    extended: true
+}))
 
 // Setup templating engine
 // Setup nunjucks loader. See https://mozilla.github.io/nunjucks/api.html#loader
@@ -36,6 +43,29 @@ app.get('/', (req, res) => {
 
 app.get('/login', (req, res) => {
     res.render('login.html')
+})
+
+app.post('/login', (req, res, next) => {
+    try {
+        let post = req.body
+        if(post.email !== 'developers@example.com'){
+            throw new Error('Invalid email or password.')
+        }
+        if(post.password !== 'password123'){
+            throw new Error('Invalid email or password.')
+        }
+        req.session.login = true
+        res.redirect('/protected')
+    } catch(err){
+        res.render('login.html', {
+            error: err.message
+        })
+    }
+})
+
+app.get('/logout', (req, res) => {
+    req.session.login = false
+    res.redirect('/')
 })
 
 app.get('/protected', (req, res) => {
