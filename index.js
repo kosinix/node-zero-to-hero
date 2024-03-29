@@ -8,7 +8,7 @@
 
     // Modules
     const db = require('./data/src/db-connect')
-
+    const passwordMan = require('./data/src/password-man')
 
     // Constants
     const appDir = __dirname // Path to app directory
@@ -49,19 +49,34 @@
     })
 
     app.get('/login', (req, res) => {
+        if (req.session.authUserId) {
+            return res.redirect('/protected')
+        }
         res.render('login.html')
     })
-
-    app.post('/login', (req, res, next) => {
+    
+    app.post('/login', async (req, res, next) => {
         try {
-            let post = req.body
-            if (post.email !== 'developers@example.com') {
-                throw new Error('Invalid email or password.')
+    
+            let post = req.body;
+    
+            let email = post.email
+            let password = post.password
+    
+            // Find admin
+            let user = await req.app.locals.db.models.User.findOne({ where: { email: email } })
+            if (!user) {
+                throw new Error('Incorrect email.')
             }
-            if (post.password !== 'password123') {
-                throw new Error('Invalid email or password.')
+    
+            // Check password
+            let passwordHash = passwordMan.hashPassword(password, user.salt);
+            if (passwordHash !== user.passwordHash) {
+                throw new Error('Incorrect password.')
             }
-            req.session.login = true
+    
+            // Save user id to session
+            req.session.authUserId = user.id
             res.redirect('/protected')
         } catch (err) {
             res.render('login.html', {
@@ -69,14 +84,14 @@
             })
         }
     })
-
+    
     app.get('/logout', (req, res) => {
-        req.session.login = false
+        req.session.authUserId = null
         res.redirect('/')
     })
-
+    
     app.get('/protected', (req, res) => {
-        if (!req.session.login) {
+        if (!req.session.authUserId) {
             return res.redirect('/login')
         }
         res.render('protected.html')
