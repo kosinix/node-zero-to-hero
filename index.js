@@ -3,7 +3,6 @@
     // Required packages
     const express = require('express')
     const nunjucks = require('nunjucks')
-    const session = require('express-session')
     const bodyParser = require('body-parser')
 
 
@@ -37,12 +36,10 @@
     // Connect to db
     app.locals.db = await db.connect()
 
+
     // Use the session middleware
-    app.use(session({
-        secret: 'secret',
-        resave: false,
-        saveUninitialized: false
-    }))
+    const session = require('./data/src/session')
+    app.use(session(app.locals.db.instance));
 
     // Static public files
     app.use(express.static(__dirname + '/data/public'));
